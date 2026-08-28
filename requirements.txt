@@ -6,3 +6,4 @@ pytest>=8.0
 # training/serving — listed here so `pip install -r requirements.txt`
 # works for local dev of the harness + dataset-build logic too)
 sentence-transformers>=3.0
+jsonschema>=4.0

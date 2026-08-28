@@ -14,10 +14,20 @@ CONFIDENCE_INSTRUCTION = (
 )
 
 
-def build_llm(model_name: str):
+def build_llm(model_name: str, lora_adapter_path: str | None = None):
     from vllm import LLM
+    from vllm.lora.request import LoRARequest
 
-    return LLM(model=model_name, trust_remote_code=True)
+    llm = LLM(
+        model=model_name,
+        trust_remote_code=True,
+        enable_lora=lora_adapter_path is not None,
+    )
+    if lora_adapter_path is not None:
+        llm._distill_lora_request = LoRARequest("student-distilled", 1, lora_adapter_path)
+    else:
+        llm._distill_lora_request = None
+    return llm
 
 
 def generate_text(llm, prompt: str, temperature: float, max_tokens: int = 1024, add_confidence: bool = False) -> str:
@@ -25,5 +35,6 @@ def generate_text(llm, prompt: str, temperature: float, max_tokens: int = 1024, 
 
     full_prompt = prompt + (CONFIDENCE_INSTRUCTION if add_confidence else "")
     params = SamplingParams(temperature=temperature, max_tokens=max_tokens)
-    output = llm.generate([full_prompt], params)
+    lora_request = getattr(llm, "_distill_lora_request", None)
+    output = llm.generate([full_prompt], params, lora_request=lora_request)
     return output[0].outputs[0].text.strip()

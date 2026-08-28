@@ -118,7 +118,7 @@ def split_holdout(examples: list[dict], holdout_fraction: float) -> tuple[list[d
     return train, holdout
 
 
-def build(cfg: dict) -> dict:
+def build(cfg: dict, cycle_id: str | None = None) -> dict:
     d = cfg["distillation"]
     records = load_records(cfg["logging"]["log_path"])
 
@@ -134,6 +134,7 @@ def build(cfg: dict) -> dict:
 
     result = {
         "status": "ok",
+        "cycle_id": cycle_id,
         "n_input_records": len(records),
         "sft_train": sft_train,
         "sft_holdout": sft_holdout,
@@ -149,15 +150,20 @@ def build(cfg: dict) -> dict:
 
 
 def main() -> None:
+    import datetime
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.yaml")
     parser.add_argument("--out-dir", default="data/dataset")
+    parser.add_argument("--holdout-dir", default="data/holdouts")
+    parser.add_argument("--cycle-id", default=None, help="defaults to today's date, YYYY-MM-DD")
     args = parser.parse_args()
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
 
-    result = build(cfg)
+    cycle_id = args.cycle_id or datetime.date.today().isoformat()
+    result = build(cfg, cycle_id=cycle_id)
     if result["status"] == "skipped":
         print(f"skipped: {result['reason']}")
         return
@@ -171,7 +177,18 @@ def main() -> None:
             for ex in result[key]:
                 f.write(json.dumps(ex) + "\n")
 
-    print(f"built dataset from {result['n_input_records']} filtered records -> {out_dir}")
+    # Persist this cycle's holdout into the registry every future cycle's
+    # eval must regress-check against (see training/eval.py).
+    holdout_dir = Path(args.holdout_dir)
+    holdout_dir.mkdir(parents=True, exist_ok=True)
+    with (holdout_dir / f"{cycle_id}.jsonl").open("w") as f:
+        for ex in result["sft_holdout"]:
+            f.write(json.dumps(ex) + "\n")
+
+    print(
+        f"built dataset from {result['n_input_records']} filtered records -> {out_dir} "
+        f"(cycle_id={cycle_id}, holdout registered at {holdout_dir}/{cycle_id}.jsonl)"
+    )
 
 
 if __name__ == "__main__":
