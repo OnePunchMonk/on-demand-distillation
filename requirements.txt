@@ -1,0 +1,8 @@
+modal>=0.64
+pyyaml>=6.0
+pytest>=8.0
+
+# training/distillation (heavy, GPU-only; installed inside Modal images for
+# training/serving — listed here so `pip install -r requirements.txt`
+# works for local dev of the harness + dataset-build logic too)
+sentence-transformers>=3.0

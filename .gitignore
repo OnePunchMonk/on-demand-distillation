@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/*.jsonl
+data/dataset/
+data/holdouts/
+checkpoints/*
+!checkpoints/.gitkeep
+.DS_Store
+.pytest_cache/
+*.egg-info/

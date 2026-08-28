@@ -1,0 +1,44 @@
+student:
+  model: Qwen/Qwen2.5-7B-Instruct
+  endpoint_app: on-demand-distill-student
+  temperature: 0.2
+
+teacher:
+  model: Qwen/Qwen2.5-72B-Instruct
+  endpoint_app: on-demand-distill-teacher
+  temperature: 0.2
+
+escalation:
+  # per-request cap and per-task-class cap, teacher calls are the expensive path
+  session_budget: 20
+  task_class_budget:
+    default: 200
+  self_reported_confidence_threshold: 0.6
+  sampling_disagreement:
+    enabled: false
+    num_samples: 2
+    temperature: 0.8
+
+logging:
+  log_path: data/escalations.jsonl
+
+distillation:
+  min_batch_size: 200
+  near_identical_similarity_threshold: 0.97
+  dedupe_similarity_threshold: 0.92
+  max_examples_per_task_class: 500
+  holdout_fraction: 0.1
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+
+training:
+  base_checkpoint: Qwen/Qwen2.5-7B-Instruct
+  output_dir: checkpoints
+  method: lora   # lora | full
+  replay_fraction: 0.3   # fraction of each SFT batch drawn from original instruction data
+  dpo:
+    enabled: false
+    beta: 0.1
+
+cycle:
+  cadence: weekly   # weekly | escalation_count
+  escalation_count_trigger: 500
